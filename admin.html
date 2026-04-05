@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin — Dosya Yönetimi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#07090f;--surface:#0c1018;--card:#111722;--card2:#141b27;--border:#1c2538;
+      --accent:#f97316;--accent2:#fb923c;--text:#f1f5f9;--muted:#64748b;
+      --green:#22c55e;--red:#ef4444;--blue:#3b82f6;
+    }
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(249,115,22,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(249,115,22,.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+    body::after{content:'';position:fixed;top:-20%;right:-10%;width:50%;height:50%;background:radial-gradient(ellipse,rgba(249,115,22,.08) 0%,transparent 70%);pointer-events:none;z-index:0;}
+    .wrap{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:0 20px 100px;}
+
+    /* HEADER */
+    header{display:flex;align-items:center;justify-content:space-between;padding:28px 0 0;margin-bottom:32px;}
+    .brand{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:-0.5px;}
+    .brand em{font-style:normal;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .admin-badge{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;background:rgba(249,115,22,.1);color:var(--accent);border:1px solid rgba(249,115,22,.2);border-radius:999px;padding:5px 12px;letter-spacing:.5px;}
+    .admin-badge svg{width:12px;height:12px;}
+
+    /* CONFIG BOX */
+    .config-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px 22px;margin-bottom:22px;animation:fadeUp .4s ease both;}
+    .config-box h3{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+    .cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .cfg-grid.full{grid-template-columns:1fr;}
+    .cfg-field label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;letter-spacing:.3px;}
+    .cfg-field input{
+      width:100%;background:var(--bg);border:1px solid var(--border);
+      border-radius:9px;padding:10px 12px;font-size:13px;
+      color:var(--text);font-family:inherit;outline:none;
+      transition:border-color .2s;
+    }
+    .cfg-field input:focus{border-color:var(--accent);}
+    .cfg-field input::placeholder{color:var(--muted);}
+    .cfg-note{margin-top:12px;font-size:11px;color:var(--muted);line-height:1.6;padding:10px 12px;background:rgba(249,115,22,.05);border-radius:8px;border-left:2px solid rgba(249,115,22,.3);}
+    .cfg-note a{color:var(--accent);text-decoration:none;}
+    .cfg-note a:hover{text-decoration:underline;}
+    .save-cfg-btn{
+      margin-top:12px;width:100%;
+      background:rgba(249,115,22,.1);color:var(--accent);
+      border:1px solid rgba(249,115,22,.25);border-radius:9px;
+      padding:10px;font-size:13px;font-weight:700;
+      cursor:pointer;font-family:inherit;transition:background .2s;
+    }
+    .save-cfg-btn:hover{background:rgba(249,115,22,.18);}
+
+    /* CAPACITY */
+    .capacity{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px 22px;margin-bottom:22px;animation:fadeUp .5s ease both;}
+    .cap-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+    .cap-label{font-size:12px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);}
+    .cap-count{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
+    .cap-count span{color:var(--accent);}
+    .progress-track{width:100%;height:6px;background:var(--border);border-radius:999px;overflow:hidden;}
+    .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:999px;transition:width .5s ease;width:0%;}
+    .progress-fill.full{background:linear-gradient(90deg,#ef4444,#f97316);}
+    .cap-slots{display:flex;gap:6px;margin-top:14px;}
+    .slot{flex:1;height:4px;border-radius:999px;background:var(--border);transition:background .3s;}
+    .slot.used{background:var(--accent);}
+    .slot.full{background:#ef4444;}
+
+    /* DROPZONE */
+    .dropzone{border:2px dashed var(--border);border-radius:20px;padding:44px 24px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:22px;position:relative;animation:fadeUp .5s .1s ease both;}
+    .dropzone:hover,.dropzone.drag-over{border-color:var(--accent);background:rgba(249,115,22,.04);}
+    .dropzone.disabled{opacity:.35;pointer-events:none;}
+    .dz-icon{font-size:42px;margin-bottom:14px;display:block;transition:transform .2s;}
+    .dropzone:hover .dz-icon{transform:scale(1.1) translateY(-3px);}
+    .dz-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-bottom:8px;}
+    .dz-sub{font-size:13px;color:var(--muted);line-height:1.6;}
+    .dz-sub strong{color:var(--accent);}
+    .dz-btn{display:inline-block;margin-top:18px;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px 24px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .2s,transform .15s;}
+    .dz-btn:hover{background:#ea6c10;transform:translateY(-1px);}
+    #fileInput{display:none;}
+
+    /* QUEUE */
+    .queue-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+    .queue-title{font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
+    .clear-btn{font-size:12px;color:var(--red);background:none;border:none;cursor:pointer;font-family:inherit;font-weight:600;display:none;transition:opacity .2s;}
+    .clear-btn:hover{opacity:.7;}
+    #queueList{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+    .q-item{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:13px 15px;animation:fadeUp .3s ease both;}
+    .q-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;background:rgba(249,115,22,.1);}
+    .q-info{flex:1;min-width:0;}
+    .q-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;}
+    .q-size{font-size:11px;color:var(--muted);}
+    .q-remove{background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;border-radius:6px;transition:color .2s;flex-shrink:0;}
+    .q-remove:hover{color:var(--red);}
+    .q-remove svg{width:15px;height:15px;}
+
+    /* UPLOAD BTN */
+    .upload-row{display:flex;gap:10px;margin-bottom:28px;animation:fadeUp .5s .2s ease both;}
+    #uploadBtn{
+      flex:1;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;
+      border:none;border-radius:13px;padding:15px;font-size:15px;font-weight:700;
+      cursor:pointer;font-family:'Syne',inherit;
+      transition:opacity .2s,transform .2s,box-shadow .2s;
+      box-shadow:0 4px 24px rgba(249,115,22,.3);
+      display:flex;align-items:center;justify-content:center;gap:8px;
+    }
+    #uploadBtn:hover:not(:disabled){opacity:.9;transform:translateY(-2px);box-shadow:0 8px 32px rgba(249,115,22,.4);}
+    #uploadBtn:disabled{opacity:.35;cursor:not-allowed;transform:none;}
+    #uploadBtn svg{width:17px;height:17px;}
+
+    /* ACTIVE UPLOADS */
+    #uploadList{display:flex;flex-direction:column;gap:10px;margin-bottom:22px;}
+    .up-item{background:var(--card2);border:1px solid var(--border);border-radius:13px;padding:13px 15px;animation:fadeUp .3s ease both;}
+    .up-top{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+    .up-icon{font-size:18px;width:28px;text-align:center;}
+    .up-name{flex:1;font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .up-pct{font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0;min-width:36px;text-align:right;}
+    .up-status{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;flex-shrink:0;}
+    .up-status.uploading{background:rgba(59,130,246,.15);color:#60a5fa;}
+    .up-status.done{background:rgba(34,197,94,.12);color:#4ade80;}
+    .up-status.error{background:rgba(239,68,68,.12);color:#f87171;}
+    .up-bar-track{height:4px;background:var(--border);border-radius:999px;overflow:hidden;}
+    .up-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--accent));transition:width .15s;width:0%;}
+    .up-bar-fill.done{background:var(--green);}
+    .up-bar-fill.error{background:var(--red);}
+
+    /* EXISTING FILES */
+    .sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+    .sec-title{font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
+    .reload-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;border-radius:6px;transition:color .2s;display:flex;align-items:center;}
+    .reload-btn:hover{color:var(--accent);}
+    .reload-btn svg{width:15px;height:15px;}
+    .reload-btn.spinning svg{animation:spin .7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    #existingList{display:flex;flex-direction:column;gap:10px;}
+    .ex-item{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:13px 15px;animation:fadeUp .3s ease both;transition:border-color .2s;}
+    .ex-item:hover{border-color:rgba(239,68,68,.25);}
+    .ex-icon{font-size:19px;width:30px;text-align:center;flex-shrink:0;}
+    .ex-info{flex:1;min-width:0;}
+    .ex-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;}
+    .ex-meta{font-size:11px;color:var(--muted);}
+    .ex-actions{display:flex;gap:6px;flex-shrink:0;}
+    .ex-copy,.ex-del{background:none;border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;transition:background .2s,border-color .2s,color .2s;display:flex;align-items:center;gap:4px;}
+    .ex-copy{color:var(--muted);}
+    .ex-copy:hover{background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.3);color:var(--blue);}
+    .ex-del{color:var(--muted);}
+    .ex-del:hover{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--red);}
+    .ex-copy svg,.ex-del svg{width:12px;height:12px;}
+
+    /* MISC */
+    .empty-small{text-align:center;padding:30px;color:var(--muted);font-size:13px;border:1px dashed var(--border);border-radius:13px;}
+    .loading-sm{display:flex;align-items:center;justify-content:center;gap:10px;padding:24px;color:var(--muted);font-size:13px;}
+    .spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+    .toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:500;padding:11px 22px;border-radius:999px;opacity:0;transition:all .3s;pointer-events:none;z-index:999;white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,.6);}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">files<em>.</em>admin</div>
+    <div class="admin-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      ADMIN
+    </div>
+  </header>
+
+  <!-- CONFIG -->
+  <div class="config-box" id="configBox">
+    <h3>⚙️ GitHub Ayarları</h3>
+    <div class="cfg-grid">
+      <div class="cfg-field"><label>GitHub Kullanıcı Adı</label><input id="cfgUser" placeholder="ahmetyilmaz" autocomplete="off"/></div>
+      <div class="cfg-field"><label>Repo Adı</label><input id="cfgRepo" placeholder="dosyalarim" autocomplete="off"/></div>
+    </div>
+    <div class="cfg-grid full" style="margin-top:10px;">
+      <div class="cfg-field"><label>Release Tag</label><input id="cfgTag" placeholder="files" autocomplete="off"/></div>
+    </div>
+    <div class="cfg-grid full" style="margin-top:10px;">
+      <div class="cfg-field">
+        <label>GitHub Personal Access Token (PAT)</label>
+        <input id="cfgToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off"/>
+      </div>
+    </div>
+    <div class="cfg-note">
+      Token oluşturmak için: <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens</a> →
+      <strong>repo</strong> iznini seç → Token'ı buraya yapıştır.<br>
+      ⚠️ Token sadece bu tarayıcıda saklanır (localStorage). Başkasına gösterme.
+    </div>
+    <button class="save-cfg-btn" id="saveCfgBtn">✓ Kaydet &amp; Bağlan</button>
+  </div>
+
+  <!-- CAPACITY -->
+  <div class="capacity">
+    <div class="cap-top">
+      <span class="cap-label">Dosya Kapasitesi</span>
+      <span class="cap-count"><span id="usedCount">0</span> / 10 slot kullanıldı</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="cap-slots" id="capSlots"></div>
+  </div>
+
+  <!-- DROPZONE -->
+  <div class="dropzone" id="dropzone">
+    <span class="dz-icon">📁</span>
+    <div class="dz-title">Dosyaları buraya bırak</div>
+    <div class="dz-sub">veya bilgisayarından seç · <strong>Her dosya türü desteklenir</strong><br>Maks. <strong>10 dosya</strong> · Dosya başına <strong>2GB</strong> limit</div>
+    <button class="dz-btn" id="dzBtn">Dosya Seç</button>
+    <input type="file" id="fileInput" multiple/>
+  </div>
+
+  <!-- QUEUE -->
+  <div id="queueSection" style="display:none;">
+    <div class="queue-header">
+      <div class="queue-title">Yükleme Kuyruğu</div>
+      <button class="clear-btn" id="clearQueueBtn">Temizle</button>
+    </div>
+    <div id="queueList"></div>
+    <div class="upload-row">
+      <button id="uploadBtn" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        GitHub'a Yükle
+      </button>
+    </div>
+  </div>
+
+  <!-- ACTIVE UPLOADS -->
+  <div id="uploadList"></div>
+
+  <!-- EXISTING -->
+  <div class="sec-header">
+    <div class="sec-title">Yüklü Dosyalar</div>
+    <button class="reload-btn" id="reloadBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+    </button>
+  </div>
+  <div id="existingList"><div class="loading-sm"><div class="spinner"></div>Bağlanılıyor…</div></div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+  // ─── State ───
+  const MAX = 10;
+  let CFG = { user:'', repo:'', tag:'files', token:'' };
+  let queue = [];
+  let currentUsed = 0;
+
+  // ─── Load saved config ───
+  try {
+    const saved = localStorage.getItem('gh_admin_cfg');
+    if(saved) CFG = {...CFG, ...JSON.parse(saved)};
+  } catch(e){}
+
+  // ─── DOM ───
+  const $ = id => document.getElementById(id);
+  const toast = $('toast');
+
+  // Fill inputs from saved config
+  $('cfgUser').value  = CFG.user;
+  $('cfgRepo').value  = CFG.repo;
+  $('cfgTag').value   = CFG.tag  || 'files';
+  $('cfgToken').value = CFG.token;
+
+  // ─── Helpers ───
+  function showToast(msg, dur=2800){
+    toast.textContent=msg; toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'), dur);
+  }
+  function fmtSize(b){if(!b)return'—';if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB';}
+  function fmtDate(s){return s?new Date(s).toLocaleDateString('tr-TR',{day:'2-digit',month:'short',year:'numeric'}):'';}
+  function fileIcon(name){
+    const e=(name.split('.').pop()||'').toLowerCase();
+    const m={pdf:'📄',zip:'🗜️',rar:'🗜️','7z':'🗜️',mp4:'🎬',mov:'🎬',mkv:'🎬',mp3:'🎵',wav:'🎵',flac:'🎵',jpg:'🖼️',jpeg:'🖼️',png:'🖼️',gif:'🖼️',webp:'🖼️',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',ppt:'📋',pptx:'📋',txt:'📃',exe:'⚙️',apk:'📱',dmg:'🍎',iso:'💿'};
+    return m[e]||'📎';
+  }
+
+  // ─── Config Save ───
+  $('saveCfgBtn').addEventListener('click', ()=>{
+    CFG.user  = $('cfgUser').value.trim();
+    CFG.repo  = $('cfgRepo').value.trim();
+    CFG.tag   = $('cfgTag').value.trim() || 'files';
+    CFG.token = $('cfgToken').value.trim();
+    if(!CFG.user || !CFG.repo || !CFG.token){
+      showToast('⚠️ Kullanıcı adı, repo ve token zorunlu!'); return;
+    }
+    localStorage.setItem('gh_admin_cfg', JSON.stringify(CFG));
+    showToast('✅ Ayarlar kaydedildi, yükleniyor…');
+    loadExisting();
+  });
+
+  // ─── Capacity ───
+  function renderCapacity(used){
+    currentUsed = used;
+    $('usedCount').textContent = used;
+    const pct = (used/MAX)*100;
+    const fill = $('progressFill');
+    fill.style.width = pct+'%';
+    fill.classList.toggle('full', used >= MAX);
+    const slots = $('capSlots');
+    slots.innerHTML='';
+    for(let i=0;i<MAX;i++){
+      const s=document.createElement('div');
+      s.className='slot'+(i<used?(used>=MAX?' full':' used'):'');
+      slots.appendChild(s);
+    }
+    $('dropzone').classList.toggle('disabled', used >= MAX);
+    if(used >= MAX) showToast('⚠️ 10 dosya limitine ulaşıldı!');
+  }
+
+  // ─── Queue ───
+  function addToQueue(files){
+    const slots = MAX - currentUsed - queue.length;
+    const arr   = Array.from(files);
+    const toAdd = arr.slice(0, slots);
+    if(toAdd.length < arr.length) showToast(`⚠️ Sadece ${toAdd.length} dosya eklenebilir (${slots} slot kaldı)`);
+    toAdd.forEach(f=>{ if(!queue.find(q=>q.name===f.name&&q.size===f.size)) queue.push(f); });
+    renderQueue();
+  }
+
+  function renderQueue(){
+    const qs=$('queueList');
+    qs.innerHTML='';
+    if(!queue.length){
+      $('queueSection').style.display='none';
+      $('clearQueueBtn').style.display='none';
+      $('uploadBtn').disabled=true; return;
+    }
+    $('queueSection').style.display='block';
+    $('clearQueueBtn').style.display='block';
+    $('uploadBtn').disabled=false;
+    queue.forEach((f,i)=>{
+      const d=document.createElement('div');
+      d.className='q-item';d.style.animationDelay=(i*.05)+'s';
+      d.innerHTML=`<div class="q-icon">${fileIcon(f.name)}</div><div class="q-info"><div class="q-name">${f.name}</div><div class="q-size">${fmtSize(f.size)}</div></div><button class="q-remove" data-i="${i}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
+      qs.appendChild(d);
+    });
+    qs.querySelectorAll('.q-remove').forEach(btn=>btn.addEventListener('click',()=>{ queue.splice(+btn.dataset.i,1); renderQueue(); }));
+  }
+  $('clearQueueBtn').addEventListener('click',()=>{ queue=[]; renderQueue(); });
+
+  // ─── Upload ───
+  $('uploadBtn').addEventListener('click', async ()=>{
+    if(!CFG.token){ showToast('⚠️ Önce GitHub ayarlarını kaydet!'); return; }
+    if(!queue.length) return;
+
+    // ensure release exists
+    let releaseId;
+    try{ releaseId = await ensureRelease(); }
+    catch(e){ showToast('❌ Release oluşturulamadı: '+e.message); return; }
+
+    const files=[...queue]; queue=[]; renderQueue();
+    $('uploadBtn').disabled=true;
+
+    for(const f of files) await uploadAsset(releaseId, f);
+    await loadExisting();
+  });
+
+  async function ensureRelease(){
+    const base = `https://api.github.com/repos/${CFG.user}/${CFG.repo}`;
+    const headers = { 'Authorization':'token '+CFG.token, 'Accept':'application/vnd.github+json' };
+
+    // try to get existing release
+    const get = await fetch(`${base}/releases/tags/${CFG.tag}`, { headers });
+    if(get.ok){ const d=await get.json(); return d.id; }
+
+    // create new release
+    const create = await fetch(`${base}/releases`,{
+      method:'POST', headers:{...headers,'Content-Type':'application/json'},
+      body: JSON.stringify({ tag_name: CFG.tag, name: CFG.tag, draft: false, prerelease: false })
+    });
+    if(!create.ok){
+      const err=await create.json();
+      throw new Error(err.message||create.status);
+    }
+    const d=await create.json(); return d.id;
+  }
+
+  function uploadAsset(releaseId, file){
+    return new Promise(resolve=>{
+      const item=document.createElement('div');
+      item.className='up-item';
+      item.innerHTML=`<div class="up-top"><div class="up-icon">${fileIcon(file.name)}</div><div class="up-name">${file.name}</div><div class="up-pct">0%</div><div class="up-status uploading">Yükleniyor</div></div><div class="up-bar-track"><div class="up-bar-fill"></div></div>`;
+      $('uploadList').prepend(item);
+
+      const fill   = item.querySelector('.up-bar-fill');
+      const status = item.querySelector('.up-status');
+      const pctEl  = item.querySelector('.up-pct');
+
+      const url = `https://uploads.github.com/repos/${CFG.user}/${CFG.repo}/releases/${releaseId}/assets?name=${encodeURIComponent(file.name)}`;
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      xhr.setRequestHeader('Authorization','token '+CFG.token);
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+      xhr.setRequestHeader('Accept','application/vnd.github+json');
+
+      xhr.upload.addEventListener('progress', e=>{
+        if(e.lengthComputable){
+          const pct=Math.round((e.loaded/e.total)*100);
+          fill.style.width=pct+'%';
+          pctEl.textContent=pct+'%';
+          status.textContent=pct+'%';
+        }
+      });
+
+      xhr.addEventListener('load',()=>{
+        if(xhr.status===201){
+          fill.style.width='100%'; fill.classList.add('done');
+          status.className='up-status done'; status.textContent='✓ Tamam'; pctEl.textContent='100%';
+          showToast('✅ Yüklendi: '+file.name);
+          setTimeout(()=>item.remove(),3000);
+        } else {
+          let msg=''; try{ msg=JSON.parse(xhr.responseText).message; }catch(e){}
+          fill.classList.add('error'); status.className='up-status error'; status.textContent='Hata';
+          showToast('❌ Hata ('+xhr.status+'): '+(msg||file.name));
+          setTimeout(()=>item.remove(),5000);
+        }
+        resolve();
+      });
+
+      xhr.addEventListener('error',()=>{
+        fill.classList.add('error'); status.className='up-status error'; status.textContent='Hata';
+        showToast('❌ Ağ hatası: '+file.name);
+        setTimeout(()=>item.remove(),5000);
+        resolve();
+      });
+
+      xhr.send(file);
+    });
+  }
+
+  // ─── Load existing ───
+  async function loadExisting(){
+    if(!CFG.user||!CFG.repo||!CFG.token){
+      $('existingList').innerHTML='<div class="empty-small">⚙️ Ayarları doldurup kaydet.</div>';
+      renderCapacity(0); return;
+    }
+    $('reloadBtn').classList.add('spinning');
+    $('existingList').innerHTML='<div class="loading-sm"><div class="spinner"></div>Yükleniyor…</div>';
+    try{
+      const res=await fetch(`https://api.github.com/repos/${CFG.user}/${CFG.repo}/releases/tags/${CFG.tag}`,{
+        headers:{'Authorization':'token '+CFG.token,'Accept':'application/vnd.github+json'}
+      });
+      if(res.status===404){
+        renderCapacity(0);
+        $('existingList').innerHTML='<div class="empty-small">📭 Henüz dosya yok. İlk dosyayı yükle!</div>'; return;
+      }
+      if(!res.ok) throw new Error('GitHub API '+res.status);
+
+      const data=await res.json();
+      const assets=(data.assets||[]).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+      renderCapacity(assets.length);
+
+      if(!assets.length){
+        $('existingList').innerHTML='<div class="empty-small">📭 Henüz dosya yok.</div>'; return;
+      }
+
+      $('existingList').innerHTML='';
+      assets.forEach((a,i)=>{
+        const d=document.createElement('div');
+        d.className='ex-item'; d.style.animationDelay=(i*.05)+'s';
+        d.innerHTML=`
+          <div class="ex-icon">${fileIcon(a.name)}</div>
+          <div class="ex-info">
+            <div class="ex-name">${a.name}</div>
+            <div class="ex-meta">${fmtSize(a.size)} · ${fmtDate(a.created_at)}</div>
+          </div>
+          <div class="ex-actions">
+            <button class="ex-copy">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              Link
+            </button>
+            <button class="ex-del">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+              Sil
+            </button>
+          </div>`;
+
+        d.querySelector('.ex-copy').addEventListener('click',()=>{
+          navigator.clipboard.writeText(a.browser_download_url)
+            .then(()=>showToast('📋 Link kopyalandı: '+a.name));
+        });
+
+        d.querySelector('.ex-del').addEventListener('click', async ()=>{
+          if(!confirm(`"${a.name}" dosyasını kalıcı sil?`)) return;
+          try{
+            const r=await fetch(`https://api.github.com/repos/${CFG.user}/${CFG.repo}/releases/assets/${a.id}`,{
+              method:'DELETE',
+              headers:{'Authorization':'token '+CFG.token,'Accept':'application/vnd.github+json'}
+            });
+            if(r.ok||r.status===204){ showToast('🗑️ Silindi: '+a.name); await loadExisting(); }
+            else throw new Error(r.status);
+          }catch(e){ showToast('❌ Silinemedi: '+e.message); }
+        });
+
+        $('existingList').appendChild(d);
+      });
+    }catch(e){
+      $('existingList').innerHTML=`<div class="empty-small">❌ Hata: ${e.message}</div>`;
+      console.error(e);
+    }finally{
+      $('reloadBtn').classList.remove('spinning');
+    }
+  }
+
+  // ─── Drag & Drop ───
+  $('dzBtn').addEventListener('click', ()=>$('fileInput').click());
+  $('dropzone').addEventListener('click', e=>{ if(e.target!==$('dzBtn')) $('fileInput').click(); });
+  $('fileInput').addEventListener('change', e=>{ if(e.target.files.length) addToQueue(e.target.files); $('fileInput').value=''; });
+  $('dropzone').addEventListener('dragover', e=>{ e.preventDefault(); $('dropzone').classList.add('drag-over'); });
+  $('dropzone').addEventListener('dragleave', ()=>$('dropzone').classList.remove('drag-over'));
+  $('dropzone').addEventListener('drop', e=>{ e.preventDefault(); $('dropzone').classList.remove('drag-over'); if(e.dataTransfer.files.length) addToQueue(e.dataTransfer.files); });
+  $('reloadBtn').addEventListener('click', loadExisting);
+
+  // ─── Init ───
+  loadExisting();
+</script>
+</body>
+</html>
